@@ -30,6 +30,9 @@ function App() {
   const [isSaving, setIsSaving] = React.useState(false)
   const [refetch, setRefetch] = React.useState(0)
   const [resources, setResources] = React.useState<Types.MoveResource[]>([])
+  // Retrieve aptos.account on initial render and store it.
+  const urlAdrress = window.location.pathname.slice(1)
+  const isEditable = !urlAdrress
 
   React.useEffect(() => {
     /*** init function*/
@@ -57,6 +60,16 @@ function App() {
     client.getAccountResources(address).then(setResources)
   }, [address, refetch])
 
+  React.useEffect(() => {
+    if (urlAdrress) {
+      setAddress(urlAdrress)
+    } else {
+      window.aptos
+        .account()
+        .then((data: {address: string}) => setAddress(data.address))
+    }
+  }, [urlAdrress])
+
   // Call set_message with the textarea value on submit.
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -79,27 +92,18 @@ function App() {
       setRefetch(refetch + 1)
     }
   }
+  // currently this
 
   const hasModules = modules.some(
     module => module.abi?.name === MESSAGE_ABI_NAME,
   )
-
   const resourceType = `${address}::message::MessageHolder`
-  const resourceList = resources.filter(r => r.type === resourceType)
-  console.log('resourceList:', resourceList)
-  const resourceData = resourceList.length
-    ? (resourceList.map(resources => resources.data) as {message: string}[])
-    : []
-  console.log('resourceData:', resourceData)
+  const resource = resources.find(r => r.type === resourceType)
+  const data = resource?.data as {message: string} | undefined
+  const message = data?.message
 
   return (
     <div className="App">
-      <p>
-        <code>{address}</code>
-      </p>
-      <p>
-        <code>{account?.sequence_number}</code>
-      </p>
       {!hasModules ? (
         <pre>
           Run this command to publish the module:
@@ -109,16 +113,10 @@ function App() {
         </pre>
       ) : (
         <form onSubmit={handleSubmit}>
-          <textarea ref={ref} />
-          <input type="submit" disabled={isSaving} />
+          <textarea ref={ref} defaultValue={message} readOnly={!isEditable} />
+          {isEditable && <input disabled={isSaving} type="submit" />}
+          {isEditable && <a href={address!}>Get public URL</a>}
         </form>
-      )}
-      {resourceData.length && (
-        <div className="message-list">
-          {resourceData.map(data => (
-            <li key={data.message}>{hexToString(data.message)}</li>
-          ))}
-        </div>
       )}
     </div>
   )
