@@ -100,7 +100,7 @@ function App() {
   const resourceType = `${address}::message::MessageHolder`
   const resource = resources.find(r => r.type === resourceType)
   const data = resource?.data as {message: string} | undefined
-  const message = data?.message
+  const message = hexToString(data?.message ?? 'no message')
 
   return (
     <div className="App">
